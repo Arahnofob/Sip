@@ -18,6 +18,10 @@ It's a **water fight**: every glass you log is a hit on your opponent.
   - "🏆 Дарина: денну норму знищено!"
   - On Android/desktop the notification has a **"⚔️ Hit back: +250 ml"** button, so you can log a glass without opening the app.
 - **🏁 Overtakes**: when one of you passes the other's total for the day (500 vs 400, then +200 → 600 vs 500), a race plays. The leader gets a crown and confetti; the one who was passed gets "Overtaken!" and a **Strike back** button. If it happened while the app was closed, it plays the next time you open it.
+- **⏰ Smart reminders** (switchable in Settings): at midday if you haven't logged anything yet, and at 20:00 if you're behind your partner or short of your goal, with a quick "Hit back" button.
+- **🥊 Morning results**: at 9:00, a push and an in-app popup with yesterday's round winner; on Mondays, the champion of the week.
+- **🎲 Weekly stake**: agree on what the week's loser has to do (Trophies tab). It shows in the arena and in the Monday announcement.
+- **🏅 Achievement pushes**: your partner gets a notification when you unlock an achievement.
 - **👊 Throw a challenge**: taunt your partner with a push (limited to once a minute).
 - **Trophies**:
   - **Scoreboard**: rounds won (each finished day goes to whoever drank more) and 👑 weeks won

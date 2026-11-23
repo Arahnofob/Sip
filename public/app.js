@@ -483,6 +483,7 @@ function arena() {
           : ''
       }
       <p class="verdict">${verdict}</p>
+      ${other && state.room.stake ? `<p class="arena-stake">🎲 ${esc(state.room.stake.text)}</p>` : ''}
     </section>`;
 }
 
@@ -653,9 +654,84 @@ function playEffects(fx) {
     () => {
       showOvertakes(fx.overtakes);
       showBadges(fx.badges);
+      showResults();
     },
     fx.hits?.length ? 650 : 0,
   );
+}
+
+// Morning results: yesterday's round and (once a week) last week's champion. Each shown once per device.
+function showResults() {
+  if (!state || state.room.members.length < 2) return;
+  const st = state.stats;
+  const me = state.me.id;
+  const key = `${state.room.code}:${me}`;
+  const y = st.yesterday;
+  if (y?.counted && ls.get(`seenRound:${key}`) !== y.day) {
+    ls.set(`seenRound:${key}`, y.day);
+    queueModal((done) => resultOverlay('round', y, done));
+  }
+  const wk = st.lastWeek;
+  if (wk?.winners?.length && ls.get(`seenWeek:${key}`) !== wk.start) {
+    ls.set(`seenWeek:${key}`, wk.start);
+    queueModal((done) => resultOverlay('week', wk, done));
+  }
+}
+
+function resultOverlay(kind, res, done) {
+  const me = state.me.id;
+  const winners = res.winners;
+  const iWon = winners.length === 1 && winners[0] === me;
+  const tie = winners.length > 1 && winners.includes(me);
+  // Who to show against me: the winner if it isn't me, otherwise the runner-up.
+  const rivals = state.room.members.filter((m) => m.id !== me).sort((a, b) => (res.totals[b.id] || 0) - (res.totals[a.id] || 0));
+  const rival = rivals.find((m) => winners.includes(m.id)) || rivals[0];
+  const meM = memberById(me);
+  const side = (m) => `<div class="res-f ${winners.includes(m.id) ? 'won' : ''}" style="--c:${m.color}">
+      ${winners.includes(m.id) && winners.length === 1 ? '<i class="f-crown">👑</i>' : ''}${avatar(m, 'lg')}
+      <span>${esc(m.name)}</span><b>${fmtL(res.totals[m.id] || 0)} ${t('lUnit')}</b></div>`;
+  const stake = kind === 'week' && state.room.stake?.text;
+  let title, text;
+  if (kind === 'round') {
+    title = tie ? t('resTie') : iWon ? t('resWin') : t('resLose');
+    text = tie ? t('resTieText', res.round) : iWon ? t('resWinText', res.round) : t('resLoseText', esc(rival.name), res.round);
+  } else {
+    title = tie ? t('weekTie') : iWon ? t('weekWin') : t('weekLose', esc(rival.name));
+    text = stake ? (tie ? t('stakeTie', esc(stake)) : iWon ? t('stakeYouWin', esc(stake), esc(rival.name)) : t('stakeYouLose', esc(stake))) : '';
+  }
+  const el = document.createElement('div');
+  el.className = `achv result ${iWon ? 'win' : tie ? 'tie' : 'lose'}`;
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-labelledby', 'res-title');
+  el.innerHTML = `
+    <div class="achv-card">
+      ${iWon ? '<div class="achv-rays" aria-hidden="true"></div>' : ''}
+      <p class="achv-kicker">${kind === 'round' ? '🥊 ' + t('resKicker', res.round) : '👑 ' + t('weekKicker')}</p>
+      <div class="res-vs">${side(meM)}<span class="vs-badge small">VS</span>${side(rival)}</div>
+      <h2 class="res-title" id="res-title">${title}</h2>
+      ${text ? `<p class="res-text">${text}</p>` : ''}
+      <button class="btn primary big" type="button" data-close>${iWon ? t('yay') : t('resBtn')}</button>
+    </div>`;
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('keydown', onKey);
+    el.classList.add('closing');
+    setTimeout(() => {
+      el.remove();
+      done?.();
+    }, 220);
+  };
+  const onKey = (e) => e.key === 'Escape' && close();
+  document.addEventListener('keydown', onKey);
+  el.addEventListener('click', (e) => {
+    if (e.target === el || e.target.closest('[data-close]')) close();
+  });
+  document.body.appendChild(el);
+  el.querySelector('.btn').focus({ preventScroll: true });
+  if (iWon) setTimeout(() => celebrate(kind === 'week' ? ['👑', '🏆', '💥', '✨'] : ['🥊', '🏆', '💥', '🔥']), 350);
 }
 
 function showBadges(fresh) {
@@ -874,6 +950,7 @@ function scoreboard() {
       </div>
       <p class="sb-label">${t('roundsWon')}</p>
       <div class="sb-mini"><span>${t('weeksWon')}</span><b><span class="l">${a.crowns}</span> : <span class="r">${b.crowns}</span></b></div>
+      ${stakeBlock()}
     </section>`;
   }
   const ranked = [...members].sort((x, y) => statsById(y.id).rounds - statsById(x.id).rounds);
@@ -886,7 +963,17 @@ function scoreboard() {
       })
       .join('')}</ol>
     <p class="sb-label">${t('roundsWon')}</p>
+    ${stakeBlock()}
   </section>`;
+}
+
+function stakeBlock() {
+  const stake = state.room.stake;
+  return `<div class="stake">
+    <div><span class="stake-label">🎲 ${t('stakeLabel')}</span>
+      ${stake ? `<b>«${esc(stake.text)}»</b>` : `<p class="hint">${t('stakeNone')}</p>`}</div>
+    <button class="btn" type="button" data-stake>${stake ? t('stakeChange') : t('stakeSet')}</button>
+  </div>`;
 }
 
 function renderStats(view) {
@@ -1001,6 +1088,19 @@ function renderStats(view) {
       badgeFor = b.dataset.badgeFor;
       renderStats(view);
     };
+  const stakeBtn = view.querySelector('[data-stake]');
+  if (stakeBtn)
+    stakeBtn.onclick = async () => {
+      const text = prompt(t('stakePrompt'), state.room.stake?.text || '');
+      if (text === null) return;
+      try {
+        state = await api('/api/stake', { method: 'PUT', body: { text } });
+        render();
+        toast(text.trim() ? t('stakeSaved') : t('stakeCleared'));
+      } catch (err) {
+        showError(err);
+      }
+    };
 }
 
 // ---------- settings ----------
@@ -1022,6 +1122,13 @@ async function renderSettings(view) {
           <label class="chip radio"><input type="radio" name="lang" value="uk" ${me.lang === 'uk' ? 'checked' : ''}><span>Українська</span></label>
           <label class="chip radio"><input type="radio" name="lang" value="en" ${me.lang === 'en' ? 'checked' : ''}><span>English</span></label>
         </div>
+      </div>
+      <div class="field"><span>${t('remindersLabel')}</span>
+        <div class="chips">
+          <label class="chip radio"><input type="radio" name="reminders" value="on" ${me.reminders !== false ? 'checked' : ''}><span>${t('on')}</span></label>
+          <label class="chip radio"><input type="radio" name="reminders" value="off" ${me.reminders === false ? 'checked' : ''}><span>${t('off')}</span></label>
+        </div>
+        <p class="hint">${t('remindersHint')}</p>
       </div>
       <button class="btn primary" type="submit">${t('save')}</button>
     </form>
@@ -1067,7 +1174,7 @@ async function renderSettings(view) {
     try {
       state = await api('/api/me', {
         method: 'PATCH',
-        body: { name: f.get('name'), goal: Number(f.get('goal')), glass: Number(f.get('glass')), lang: f.get('lang') },
+        body: { name: f.get('name'), goal: Number(f.get('goal')), glass: Number(f.get('glass')), lang: f.get('lang'), reminders: f.get('reminders') !== 'off' },
       });
       setLang(state.me.lang);
       settingsDirty = false;

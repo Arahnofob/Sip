@@ -5,7 +5,8 @@ import express from 'express';
 import webpush from 'web-push';
 import { Store } from './store.js';
 import { computeStats, currentGoal, dayKey, isValidTimeZone, todayTotal } from './stats.js';
-import { drankMessage, nudgeMessage, texts } from './messages.js';
+import { achvMessage, drankMessage, nudgeMessage, stakeMessage, texts } from './messages.js';
+import { collectDue } from './scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -146,9 +147,15 @@ function statePayload(room, me) {
       tz: me.tz,
       lang: me.lang,
       loginCode: me.loginCode,
+      reminders: me.reminders !== false,
       devices: devicesOf(me),
     },
-    room: { code: room.code, createdAt: room.createdAt, members: room.members.map(publicMember) },
+    room: {
+      code: room.code,
+      createdAt: room.createdAt,
+      members: room.members.map(publicMember),
+      stake: room.stake ? { text: room.stake.text, by: room.stake.by, at: room.stake.at } : null,
+    },
     todayEntries,
     stats: computeStats(room, now),
     pushReady: room.members.filter((m) => (db.subscriptions[m.id] || []).length > 0).map((m) => m.id),
@@ -180,6 +187,11 @@ async function pushTo(member, payload) {
       }
     }),
   );
+}
+
+function earnedBadges(room, member) {
+  const s = computeStats(room).members.find((x) => x.memberId === member.id);
+  return new Set(Object.keys(s?.badges || {}).filter((b) => s.badges[b]));
 }
 
 function notifyOthers(room, sender, build) {
@@ -266,6 +278,7 @@ app.post('/api/entries', auth, (req, res) => {
   const { room, me } = req.ctx;
   const ml = cleanInt(req.body.ml, 10, 3000, null);
   if (!ml) throw new HttpError(400, 'bad_amount');
+  const badgesBefore = earnedBadges(room, me);
   const entry = { id: id(), memberId: me.id, ml, ts: Date.now() };
   room.entries.push(entry);
   store.save();
@@ -283,6 +296,14 @@ app.post('/api/entries', auth, (req, res) => {
       recipientGoal: currentGoal(m),
     }),
   );
+  // Tell the others about any achievement this glass unlocked.
+  for (const badge of earnedBadges(room, me)) {
+    if (badgesBefore.has(badge)) continue;
+    for (const m of room.members) {
+      if (m.id === me.id) continue;
+      pushTo(m, { ...achvMessage({ lang: m.lang, name: me.name, badge }), tag: `achv-${badge}`, url: '/' }).catch(() => {});
+    }
+  }
   res.json({ entry });
 });
 
@@ -314,6 +335,7 @@ app.patch('/api/me', auth, (req, res) => {
   if (b.tz !== undefined) me.tz = cleanTz(b.tz);
   if (b.lang !== undefined) me.lang = cleanLang(b.lang);
   if (b.glass !== undefined) me.glass = cleanInt(b.glass, 50, 1500, me.glass);
+  if (b.reminders !== undefined) me.reminders = Boolean(b.reminders);
   if (b.goal !== undefined) {
     const goal = cleanInt(b.goal, 500, 6000, null);
     if (!goal) throw new HttpError(400, 'bad_goal');
@@ -326,6 +348,17 @@ app.patch('/api/me', auth, (req, res) => {
   }
   store.save();
   broadcast(room.id);
+  res.json(statePayload(room, me));
+});
+
+// Weekly stake: what the week's loser has to do. Empty text clears it.
+app.put('/api/stake', auth, (req, res) => {
+  const { room, me } = req.ctx;
+  const text = typeof req.body?.text === 'string' ? req.body.text.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
+  room.stake = text ? { text, by: me.id, at: Date.now() } : null;
+  store.save();
+  broadcast(room.id);
+  if (text) notifyOthers(room, me, (m) => stakeMessage({ lang: m.lang, name: me.name, text }));
   res.json(statePayload(room, me));
 });
 
@@ -419,6 +452,33 @@ app.use((err, _req, res, _next) => {
   if (status === 500) console.error(err);
   res.status(status).json({ error: status === 500 ? 'server_error' : err.message });
 });
+
+// ---------- timed pushes: reminders, round results, weekly champion ----------
+function runScheduler() {
+  let changed = false;
+  for (const room of Object.values(db.rooms)) {
+    try {
+      const due = collectDue(room);
+      changed ||= due.changed;
+      for (const msg of due.messages) {
+        const m = room.members.find((x) => x.id === msg.memberId);
+        if (!m) continue;
+        pushTo(m, {
+          title: msg.title,
+          body: msg.body,
+          tag: msg.tag,
+          url: '/',
+          ...(msg.drink ? { glass: m.glass, action: texts(m.lang).drinkAction(m.glass) } : {}),
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('scheduler', err);
+    }
+  }
+  if (changed) store.save();
+}
+setInterval(runScheduler, 60_000).unref();
+setTimeout(runScheduler, 10_000).unref();
 
 const server = app.listen(PORT, () => console.log(`💧 Water Together running on http://localhost:${PORT}`));
 

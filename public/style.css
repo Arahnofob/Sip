@@ -1771,3 +1771,107 @@ details[open] summary {
     transition: none !important;
   }
 }
+
+/* ---------- round / week results ---------- */
+.res-vs {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 18px;
+}
+.res-f {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  opacity: 0.7;
+}
+.res-f.won {
+  opacity: 1;
+}
+.res-f span {
+  font-family: var(--display);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.res-f b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: var(--c);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--c) 60%, transparent);
+}
+.res-f .f-crown {
+  top: -26px;
+}
+.res-title {
+  position: relative;
+  margin-top: 14px;
+  font-size: 2rem;
+  text-transform: uppercase;
+  transform: skewX(-8deg);
+  background: linear-gradient(180deg, #fff6c8, var(--gold) 55%, var(--fire-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ot-title 0.5s 0.3s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.result.lose .res-title {
+  background: linear-gradient(180deg, #ffd0d4, var(--danger) 55%, #c0122f);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.result.lose .achv-card {
+  border-color: rgba(255, 90, 106, 0.5);
+  box-shadow: 0 0 60px rgba(255, 46, 77, 0.3), 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.res-text {
+  position: relative;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ---------- stake ---------- */
+.stake {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.stake-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.stake b {
+  display: block;
+  margin-top: 2px;
+  color: var(--gold);
+}
+.stake .hint {
+  margin-top: 2px;
+}
+.stake .btn {
+  flex: none;
+}
+.arena-stake {
+  position: relative;
+  text-align: center;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}

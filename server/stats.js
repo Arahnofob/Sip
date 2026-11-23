@@ -46,6 +46,8 @@ export function addDays(key, n) {
   return d.toISOString().slice(0, 10);
 }
 
+export const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+
 /** Monday of the week containing `key`. */
 export function weekStart(key) {
   const d = new Date(`${key}T00:00:00Z`);
@@ -260,7 +262,32 @@ export function computeStats(room, now = Date.now()) {
     .sort((a, b) => b.weekTotal - a.weekTotal)
     .map((s) => ({ memberId: s.memberId, weekTotal: s.weekTotal }));
 
-  return { members: result, team, leaderboard, lastWeekWinners };
+  // Yesterday's round and last week's battle (for the morning results).
+  let yesterday = null;
+  let lastWeekResult = null;
+  if (perMember.length >= 2) {
+    const tz0 = members[0].tz || 'UTC';
+    const start = dayKey(Math.max(...members.map((m) => m.createdAt || 0)), tz0);
+    const yKey = addDays(perMember[0].today, -1);
+    const totals = Object.fromEntries(perMember.map((s) => [s.memberId, s.totals.get(addDays(s.today, -1)) || 0]));
+    const max = Math.max(...Object.values(totals));
+    const created = dayKey(room.createdAt ?? Math.min(...members.map((m) => m.createdAt || 0)), tz0);
+    yesterday = {
+      day: yKey,
+      round: daysBetween(created, yKey) + 1,
+      totals,
+      winners: max > 0 ? Object.keys(totals).filter((id) => totals[id] === max) : [],
+      counted: yKey >= start && max > 0,
+    };
+    const wm = weekly.get(lastWeek) || new Map();
+    lastWeekResult = {
+      start: lastWeek,
+      totals: Object.fromEntries(members.map((m) => [m.id, wm.get(m.id) || 0])),
+      winners: lastWeekWinners,
+    };
+  }
+
+  return { members: result, team, leaderboard, lastWeekWinners, yesterday, lastWeek: lastWeekResult };
 }
 
 /** Today's total for one member (used to decide push wording). */
