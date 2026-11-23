@@ -1,4 +1,4 @@
-# 💧 Ковток (Kovtok) — drink water together
+# 💧 SIP — a water fight for two
 
 A tiny web app for two (or a few) people to track how much water they drink each day.
 **Every time one of you logs a glass, the other gets a push notification** nudging them to drink too.
@@ -60,7 +60,7 @@ fly volumes create data --size 1
 fly deploy
 ```
 
-**Your own server / Raspberry Pi**: `docker build -t kovtok . && docker run -d -p 3000:3000 -v kovtok-data:/data kovtok`, then put it behind HTTPS (Caddy, Cloudflare Tunnel or Tailscale Funnel).
+**Your own server / Raspberry Pi**: `docker build -t sip . && docker run -d -p 3000:3000 -v sip-data:/data sip`, then put it behind HTTPS (Caddy, Cloudflare Tunnel or Tailscale Funnel).
 
 Optional environment variables: `PORT`, `DATA_DIR`, `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (if you want to manage keys yourself), `VAPID_SUBJECT` (a `mailto:` contact for push services).
 
@@ -68,6 +68,6 @@ Optional environment variables: `PORT`, `DATA_DIR`, `VAPID_PUBLIC_KEY` / `VAPID_
 
 ## Getting notifications on your phones
 
-- **iPhone (iOS 16.4+)**: open the site in Safari → Share → **Add to Home Screen** → open Kovtok from the home screen icon → Settings → Enable notifications. (iOS only allows web push for apps added to the home screen.)
+- **iPhone (iOS 16.4+)**: open the site in Safari → Share → **Add to Home Screen** → open SIP from the home screen icon → Settings → Enable notifications. (iOS only allows web push for apps added to the home screen.)
 - **Android**: open in Chrome → tap **Enable** on the banner. Installing to the home screen is optional but nicer.
 - Use **Settings → Send test** to check it works.

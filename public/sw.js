@@ -1,8 +1,8 @@
 // Service worker: offline app shell, push notifications, and the
 // "Me too: +250 ml" quick action right from the notification.
 
-const SHELL = 'kovtok-shell-v3';
-const AUTH = 'kovtok-auth';
+const SHELL = 'sip-shell-v4';
+const AUTH = 'sip-auth';
 const SHELL_FILES = ['/', '/index.html', '/style.css', '/app.js', '/i18n.js', '/manifest.webmanifest', '/icons/icon-192.png', '/fonts/russo-one-cyrillic.woff2', '/fonts/russo-one-latin.woff2'];
 
 self.addEventListener('install', (event) => {
@@ -40,18 +40,18 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: 'Ковток', body: event.data && event.data.text() };
+    data = { title: 'SIP', body: event.data && event.data.text() };
   }
   const options = {
     body: data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-96.png',
-    tag: data.tag || 'kovtok',
+    tag: data.tag || 'sip',
     renotify: true,
     data: { url: data.url || '/', glass: data.glass },
   };
   if (data.action && data.glass) options.actions = [{ action: 'drink', title: data.action }];
-  event.waitUntil(self.registration.showNotification(data.title || 'Ковток 💧', options));
+  event.waitUntil(self.registration.showNotification(data.title || 'SIP 💧', options));
 });
 
 async function token() {

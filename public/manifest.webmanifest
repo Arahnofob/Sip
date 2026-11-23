@@ -1,6 +1,6 @@
 {
-  "name": "Ковток — водна битва",
-  "short_name": "Ковток",
+  "name": "SIP",
+  "short_name": "SIP",
   "description": "A water fight for two: every glass you log is a hit on your opponent.",
   "start_url": "/",
   "scope": "/",

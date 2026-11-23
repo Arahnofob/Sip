@@ -95,7 +95,7 @@ async function setToken(v) {
   token = v;
   ls.set('token', v);
   try {
-    const cache = await caches.open('kovtok-auth');
+    const cache = await caches.open('sip-auth');
     if (v) await cache.put('/__token', new Response(v));
     else await cache.delete('/__token');
   } catch {}

@@ -12,7 +12,7 @@ const enPlural = (n, one, many) => (n === 1 ? one : many);
 
 export const dict = {
   uk: {
-    appName: 'Ковток',
+    appName: 'SIP',
     subtitle: 'Водна битва',
     tagline: 'Хто вип’є більше води? Кожна твоя склянка — удар по суперникові.',
     yourName: 'Твоє ім’я',
@@ -60,7 +60,7 @@ export const dict = {
     enableNotifs: 'Увімкни сповіщення',
     enableNotifsText: 'Щоб знати про кожен удар суперника — і відповідати.',
     enable: 'Увімкнути',
-    iosHint: 'На iPhone: «Поділитися» → «На початковий екран», відкрий Ковток з іконки — і тоді вмикай сповіщення.',
+    iosHint: 'На iPhone: «Поділитися» → «На початковий екран», відкрий SIP з іконки — і тоді вмикай сповіщення.',
     notifsUnsupported: 'Цей браузер не підтримує push-сповіщення.',
     notifsDenied: 'Сповіщення заблоковані в налаштуваннях браузера.',
     partnerNoNotifs: (name) => `${name} ще не увімкнув(-ла) сповіщення`,
@@ -113,7 +113,7 @@ export const dict = {
     ml: 'мл',
     lUnit: 'л',
     members: 'Бійці',
-    installHint: 'Порада: додай Ковток на головний екран, щоб відкривати як застосунок.',
+    installHint: 'Порада: додай SIP на головний екран, щоб відкривати як застосунок.',
     overtakeWinTitle: 'Обгін!',
     overtakeWinText: (name, me, them) => `Ти випереджаєш ${name}: ${me} проти ${them} мл`,
     overtakeLoseTitle: 'Тебе обігнали!',
@@ -124,7 +124,7 @@ export const dict = {
     overtakeOthers: (a, b) => `⚡ ${a} обганяє ${b}!`,
   },
   en: {
-    appName: 'Kovtok',
+    appName: 'SIP',
     subtitle: 'Water fight',
     tagline: 'Who drinks more water? Every glass you log is a hit on your opponent.',
     yourName: 'Your name',
@@ -172,7 +172,7 @@ export const dict = {
     enableNotifs: 'Turn on notifications',
     enableNotifsText: 'So you feel every hit your opponent lands — and can answer.',
     enable: 'Enable',
-    iosHint: 'On iPhone: Share → Add to Home Screen, open Kovtok from the icon, then enable notifications.',
+    iosHint: 'On iPhone: Share → Add to Home Screen, open SIP from the icon, then enable notifications.',
     notifsUnsupported: "This browser doesn't support push notifications.",
     notifsDenied: 'Notifications are blocked in your browser settings.',
     partnerNoNotifs: (name) => `${name} hasn't turned on notifications yet`,
@@ -225,7 +225,7 @@ export const dict = {
     ml: 'ml',
     lUnit: 'L',
     members: 'Fighters',
-    installHint: 'Tip: add Kovtok to your home screen to open it like an app.',
+    installHint: 'Tip: add SIP to your home screen to open it like an app.',
     overtakeWinTitle: 'Overtake!',
     overtakeWinText: (name, me, them) => `You're ahead of ${name}: ${me} vs ${them} ml`,
     overtakeLoseTitle: 'Overtaken!',
