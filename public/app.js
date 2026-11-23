@@ -315,7 +315,7 @@ async function loadState() {
   state = await api('/api/state');
   if (state.me.lang && state.me.lang !== lang) setLang(state.me.lang);
   if (state.me.tz !== browserTz()) api('/api/me', { method: 'PATCH', body: { tz: browserTz() } }).catch(() => {});
-  return { overtakes: detectOvertakes(state), hits: detectHits(state) };
+  return { overtakes: detectOvertakes(state), hits: detectHits(state), badges: detectBadges(state) };
 }
 
 function detectHits(st) {
@@ -617,11 +617,101 @@ async function deleteEntry(id) {
   toast(t('removed'));
 }
 
+// Achievements this device has already celebrated, per person (in localStorage). The first time a
+// device sees someone, their existing achievements are recorded quietly; only new ones pop up.
+function detectBadges(st) {
+  const key = `seenBadges:${st.room.code}:${st.me.id}`;
+  let seen = null;
+  try {
+    seen = JSON.parse(ls.get(key) || 'null');
+  } catch {}
+  const earned = Object.fromEntries(st.stats.members.map((s) => [s.memberId, Object.keys(s.badges).filter((b) => s.badges[b])]));
+  const fresh = [];
+  if (seen) {
+    for (const [id, list] of Object.entries(earned)) {
+      if (!seen[id]) continue;
+      for (const b of list) if (!seen[id].includes(b)) fresh.push({ memberId: id, badge: b });
+    }
+  }
+  const merged = { ...(seen || {}) };
+  for (const [id, list] of Object.entries(earned)) merged[id] = [...new Set([...(merged[id] || []), ...list])];
+  ls.set(key, JSON.stringify(merged));
+  return fresh;
+}
+
 // ---------- effects ----------
+// Full-screen moments (overtakes, achievements) play one after another, never on top of each other.
+let modalChain = Promise.resolve();
+function queueModal(open) {
+  modalChain = modalChain.then(() => new Promise((resolve) => open(resolve))).catch(() => {});
+}
+
 function playEffects(fx) {
   if (!fx) return;
   if (tab === 'today') playHits(fx.hits);
-  if (fx.overtakes?.length) setTimeout(() => showOvertakes(fx.overtakes), fx.hits?.length ? 650 : 0);
+  setTimeout(
+    () => {
+      showOvertakes(fx.overtakes);
+      showBadges(fx.badges);
+    },
+    fx.hits?.length ? 650 : 0,
+  );
+}
+
+function showBadges(fresh) {
+  if (!fresh?.length || !state) return;
+  const me = state.me.id;
+  const mine = fresh.filter((f) => f.memberId === me).map((f) => f.badge);
+  if (mine.length) queueModal((done) => achievementOverlay(mine, done));
+  // Partner's new achievements: a toast (team ones are already in my own popup).
+  for (const f of fresh) {
+    if (f.memberId === me || mine.includes(f.badge)) continue;
+    const name = memberById(f.memberId)?.name;
+    queueModal((done) => {
+      toast(t('partnerAchv', name, BADGE_ICONS[f.badge], t('badge')[f.badge][0]));
+      setTimeout(done, 1200);
+    });
+  }
+}
+
+function achievementOverlay(badges, done) {
+  const el = document.createElement('div');
+  el.className = 'achv';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-labelledby', 'achv-title');
+  el.innerHTML = `
+    <div class="achv-card ${badges.length > 1 ? 'many' : ''}">
+      <div class="achv-rays" aria-hidden="true"></div>
+      <p class="achv-kicker" id="achv-title">${badges.length > 1 ? t('achvMany', badges.length) : t('achvUnlocked')}</p>
+      <ul class="achv-list">${badges
+        .map((b, i) => {
+          const [name, desc] = t('badge')[b];
+          return `<li style="--i:${i}"><div class="achv-badge">${BADGE_ICONS[b]}</div><h2>${esc(name)}</h2><p>${esc(desc)}</p></li>`;
+        })
+        .join('')}</ul>
+      <button class="btn primary big" type="button" data-close>${t('achvBtn')}</button>
+    </div>`;
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('keydown', onKey);
+    el.classList.add('closing');
+    setTimeout(() => {
+      el.remove();
+      done?.();
+    }, 220);
+  };
+  const onKey = (e) => e.key === 'Escape' && close();
+  document.addEventListener('keydown', onKey);
+  el.addEventListener('click', (e) => {
+    if (e.target === el || e.target.closest('[data-close]')) close();
+  });
+  document.body.appendChild(el);
+  el.querySelector('.btn').focus({ preventScroll: true });
+  navigator.vibrate?.([30, 50, 30, 50, 200]);
+  setTimeout(() => celebrate([...badges.map((b) => BADGE_ICONS[b]), '✨', '🏅']), 350);
 }
 
 /** Damage numbers fly off whoever drank; everyone else takes the hit. */
@@ -669,18 +759,17 @@ function showOvertakes(events) {
   const me = state.me.id;
   // The pass that matters most to me: someone passing me, then me passing someone.
   const ev = events.find((e) => e.loser === me) || events.find((e) => e.winner === me);
-  if (ev) return overtakeOverlay(ev);
+  if (ev) return queueModal((done) => overtakeOverlay(ev, done));
   const e = events[events.length - 1];
   toast(t('overtakeOthers', memberById(e.winner)?.name, memberById(e.loser)?.name));
 }
 
-function overtakeOverlay(ev) {
+function overtakeOverlay(ev, done) {
   const winner = memberById(ev.winner);
   const loser = memberById(ev.loser);
-  if (!winner || !loser) return;
+  if (!winner || !loser) return done?.();
   const iWon = ev.winner === state.me.id;
   const other = iWon ? loser : winner;
-  document.querySelector('.overtake')?.remove();
 
   const el = document.createElement('div');
   el.className = `overtake ${iWon ? 'win' : 'lose'}`;
@@ -706,11 +795,17 @@ function overtakeOverlay(ev) {
     </div>`;
 
   let timer;
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
     clearTimeout(timer);
     document.removeEventListener('keydown', onKey);
     el.classList.add('closing');
-    setTimeout(() => el.remove(), 220);
+    setTimeout(() => {
+      el.remove();
+      done?.();
+    }, 220);
   };
   const onKey = (e) => e.key === 'Escape' && close();
   document.addEventListener('keydown', onKey);

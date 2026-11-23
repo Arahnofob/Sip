@@ -135,6 +135,10 @@ export const dict = {
     later: 'Пізніше',
     yay: 'Так тримати! 💪',
     overtakeOthers: (a, b) => `⚡ ${a} обганяє ${b}!`,
+    achvUnlocked: 'Нове досягнення!',
+    achvMany: (n) => `Нові досягнення: ${n}!`,
+    achvBtn: 'Круто! 💪',
+    partnerAchv: (name, icon, badge) => `${icon} ${name}: нове досягнення «${badge}»`,
   },
   en: {
     appName: 'SIP',
@@ -260,6 +264,10 @@ export const dict = {
     later: 'Later',
     yay: 'Keep the pressure! 💪',
     overtakeOthers: (a, b) => `⚡ ${a} overtook ${b}!`,
+    achvUnlocked: 'Achievement unlocked!',
+    achvMany: (n) => `${n} new achievements!`,
+    achvBtn: 'Awesome! 💪',
+    partnerAchv: (name, icon, badge) => `${icon} ${name} unlocked “${badge}”`,
   },
 };
 

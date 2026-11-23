@@ -1,7 +1,7 @@
 // Service worker: offline app shell, push notifications, and the
-// "Me too: +250 ml" quick action right from the notification.
+// "Hit back: +250 ml" quick action right from the notification.
 
-const SHELL = 'sip-shell-v6';
+const SHELL = 'sip-shell-v7';
 const AUTH = 'sip-auth';
 const SHELL_FILES = ['/', '/index.html', '/style.css', '/app.js', '/i18n.js', '/manifest.webmanifest', '/icons/icon-192.png', '/fonts/russo-one-cyrillic.woff2', '/fonts/russo-one-latin.woff2'];
 

@@ -1643,6 +1643,126 @@ details[open] summary {
   filter: saturate(0.5) brightness(0.8);
 }
 
+/* ---------- achievement unlocked ---------- */
+.achv {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 197, 49, 0.18), rgba(4, 6, 16, 0.82) 65%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: ot-fade 0.25s ease both;
+}
+.achv.closing {
+  animation: ot-fade 0.2s ease reverse both;
+}
+.achv-card {
+  position: relative;
+  overflow: hidden;
+  width: min(100%, 360px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  text-align: center;
+  padding: 24px 20px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 197, 49, 0.55);
+  background:
+    repeating-linear-gradient(-60deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 10px),
+    linear-gradient(180deg, #1b2152, #0c1232);
+  box-shadow: 0 0 70px rgba(255, 176, 32, 0.35), 0 24px 60px rgba(0, 0, 0, 0.5);
+  animation: ot-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+/* Rotating light rays behind the badge. */
+.achv-rays {
+  position: absolute;
+  left: 50%;
+  top: 112px;
+  width: 520px;
+  height: 520px;
+  margin: -260px 0 0 -260px;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 197, 49, 0.16) 0 10deg, transparent 10deg 24deg);
+  -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 62%);
+  mask-image: radial-gradient(circle, #000 18%, transparent 62%);
+  animation: rays 14s linear infinite;
+  pointer-events: none;
+}
+.achv-card.many .achv-rays {
+  top: 50%;
+}
+@keyframes rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.achv-kicker {
+  position: relative;
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.8rem;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(255, 197, 49, 0.6);
+}
+.achv-list {
+  position: relative;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.achv-list li {
+  animation: achv-in 0.6s calc(0.25s + var(--i) * 0.35s) cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes achv-in {
+  from {
+    transform: translateY(-40px) scale(0.3) rotate(-25deg);
+    opacity: 0;
+  }
+}
+.achv-badge {
+  width: 104px;
+  height: 104px;
+  margin: 6px auto 10px;
+  display: grid;
+  place-items: center;
+  font-size: 3.2rem;
+  clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  background: radial-gradient(circle at 50% 35%, rgba(255, 230, 150, 0.55), rgba(255, 140, 30, 0.35) 55%, rgba(120, 40, 0, 0.5));
+  filter: drop-shadow(0 0 18px rgba(255, 176, 32, 0.8));
+}
+.achv-card.many .achv-badge {
+  width: 72px;
+  height: 72px;
+  font-size: 2.2rem;
+  margin-bottom: 6px;
+}
+.achv-list h2 {
+  font-size: 1.6rem;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #fff6c8, var(--gold) 55%, var(--fire-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transform: skewX(-6deg);
+}
+.achv-card.many h2 {
+  font-size: 1.15rem;
+}
+.achv-list p {
+  color: var(--muted);
+  margin-top: 4px;
+}
+.achv-card .btn {
+  position: relative;
+  width: 100%;
+  margin-top: 18px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
