@@ -45,9 +45,9 @@ Push notifications work on `localhost` for testing in desktop Chrome/Firefox/Edg
 
 ## Deploy (you need HTTPS + a persistent disk)
 
-Any host that runs a Docker image or Node.js app with a persistent volume works. Set `DATA_DIR` to the mounted volume.
+Any host that runs a Docker image or Node.js app with a persistent volume works. With the Dockerfile, mount the volume at `/data`; without Docker, set `DATA_DIR` to the volume's path.
 
-**Railway** (simplest): New Project → Deploy from GitHub repo → add a **Volume** mounted at `/data` → set the variable `DATA_DIR=/data` → Settings → Networking → Generate Domain.
+**Railway** (simplest): New Project → Deploy from GitHub repo → right-click the service → **Attach Volume** with mount path `/data` → Settings → Networking → **Generate Domain**. (The Docker image already stores its data in `/data`, so no variables are needed.)
 
 **Fly.io**:
 ```bash
