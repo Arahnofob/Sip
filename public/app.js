@@ -1106,7 +1106,8 @@ function renderStats(view) {
 // ---------- settings ----------
 async function renderSettings(view) {
   const me = state.me;
-  const glasses = [...new Set([...GLASSES, me.glass])].sort((a, b) => a - b);
+  const glasses = GLASSES;
+  const customGlass = !GLASSES.includes(me.glass);
   view.innerHTML = `
     <form class="card stack" id="profile">
       <h2>${t('profile')}</h2>
@@ -1115,7 +1116,11 @@ async function renderSettings(view) {
       <div class="field"><span>${t('glassSize')}</span>
         <div class="chips">${glasses
           .map((g) => `<label class="chip radio"><input type="radio" name="glass" value="${g}" ${g === me.glass ? 'checked' : ''}><span>${g} ${t('ml')}</span></label>`)
-          .join('')}</div>
+          .join('')}<label class="chip radio"><input type="radio" name="glass" value="custom" ${customGlass ? 'checked' : ''}><span>${t('custom')}</span></label></div>
+        <label class="custom-glass" ${customGlass ? '' : 'hidden'}>
+          <input type="number" name="glassCustom" inputmode="numeric" min="50" max="1500" step="10" value="${customGlass ? me.glass : ''}" placeholder="430">
+          <span>${t('ml')}</span>
+        </label>
       </div>
       <div class="field"><span>${t('language')}</span>
         <div class="chips">
@@ -1167,14 +1172,22 @@ async function renderSettings(view) {
 
   bindInvite(view);
   const form = view.querySelector('#profile');
+  const customBox = form.querySelector('.custom-glass');
   form.oninput = () => (settingsDirty = true);
+  form.onchange = (e) => {
+    if (e.target.name !== 'glass') return;
+    customBox.hidden = e.target.value !== 'custom';
+    if (!customBox.hidden) customBox.querySelector('input').focus();
+  };
   form.onsubmit = async (e) => {
     e.preventDefault();
     const f = new FormData(form);
+    const glass = f.get('glass') === 'custom' ? Math.round(Number(f.get('glassCustom'))) : Number(f.get('glass'));
+    if (!(glass >= 50 && glass <= 1500)) return toast(t('glassRange'));
     try {
       state = await api('/api/me', {
         method: 'PATCH',
-        body: { name: f.get('name'), goal: Number(f.get('goal')), glass: Number(f.get('glass')), lang: f.get('lang'), reminders: f.get('reminders') !== 'off' },
+        body: { name: f.get('name'), goal: Number(f.get('goal')), glass, lang: f.get('lang'), reminders: f.get('reminders') !== 'off' },
       });
       setLang(state.me.lang);
       settingsDirty = false;
