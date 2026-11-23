@@ -545,14 +545,9 @@ function renderToday(view) {
       setTimeout(() => (nudge.disabled = false), 1500);
     };
   for (const b of view.querySelectorAll('[data-del]'))
-    b.onclick = async () => {
-      try {
-        await api(`/api/entries/${b.dataset.del}`, { method: 'DELETE' });
-        await refresh();
-        toast(t('removed'));
-      } catch (err) {
-        showError(err);
-      }
+    b.onclick = () => {
+      b.disabled = true;
+      deleteEntry(b.dataset.del).finally(() => (b.disabled = false));
     };
 }
 
@@ -570,10 +565,7 @@ async function addWater(ml, btn) {
     } else {
       toast(t('added', ml), {
         label: t('undo'),
-        run: async () => {
-          await api(`/api/entries/${entry.id}`, { method: 'DELETE' }).catch(showError);
-          refresh();
-        },
+        run: () => deleteEntry(entry.id),
       });
     }
   } catch (err) {
@@ -581,6 +573,22 @@ async function addWater(ml, btn) {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+// If the server no longer has the entry (say it restarted mid-change and this screen
+// was showing stale data), deleting it is already done: just re-sync.
+async function deleteEntry(id) {
+  try {
+    await api(`/api/entries/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (err) {
+    if (err.status !== 404) {
+      showError(err);
+      await refresh().catch(() => {});
+      return;
+    }
+  }
+  await refresh().catch(() => {});
+  toast(t('removed'));
 }
 
 // ---------- effects ----------
@@ -1060,6 +1068,8 @@ function connectEvents() {
   if (!token || !('EventSource' in window)) return;
   events = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
   events.addEventListener('update', scheduleRefresh);
+  // Re-sync whenever the live connection (re)opens, e.g. after the server restarts.
+  events.addEventListener('open', scheduleRefresh);
 }
 
 document.addEventListener('visibilitychange', () => {
