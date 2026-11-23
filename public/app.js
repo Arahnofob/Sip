@@ -177,7 +177,7 @@ function renderWelcome(prefillCode = '') {
   <main class="onboard">
     ${langSwitch()}
     <div class="hero">
-      <img src="/icons/icon.svg" alt="" class="hero-icon">
+      <img src="/icons/icon-192.png" alt="" class="hero-icon">
       <h1>${t('appName')}</h1>
       <p>${t('tagline')}</p>
     </div>
@@ -281,11 +281,109 @@ async function loadState() {
   state = await api('/api/state');
   if (state.me.lang && state.me.lang !== lang) setLang(state.me.lang);
   if (state.me.tz !== browserTz()) api('/api/me', { method: 'PATCH', body: { tz: browserTz() } }).catch(() => {});
+  return detectOvertakes(state);
+}
+
+// ---------- overtakes ----------
+// We remember the totals this device last saw (in localStorage), so an overtake that
+// happened while the app was closed still plays when you open it.
+function detectOvertakes(st) {
+  const mine = st.stats.members.find((s) => s.memberId === st.me.id);
+  const scope = `${st.room.code}:${st.me.id}:${mine.today}`;
+  const now = Object.fromEntries(st.stats.members.map((s) => [s.memberId, s.todayMl]));
+  let prev = null;
+  try {
+    const saved = JSON.parse(ls.get('seenTotals') || 'null');
+    if (saved?.scope === scope) prev = saved.totals;
+  } catch {}
+  ls.set('seenTotals', JSON.stringify({ scope, totals: now }));
+  if (!prev) return [];
+  const events = [];
+  for (const w of Object.keys(now)) {
+    for (const l of Object.keys(now)) {
+      if (w === l || !(w in prev) || !(l in prev)) continue;
+      // w drank, was level or behind l (who had drunk something), and is now ahead.
+      if (now[w] > prev[w] && prev[l] > 0 && prev[w] <= prev[l] && now[w] > now[l]) {
+        events.push({ winner: w, loser: l, w: now[w], l: now[l] });
+      }
+    }
+  }
+  return events;
+}
+
+function showOvertakes(events) {
+  if (!events?.length || !state) return;
+  const me = state.me.id;
+  // The pass that matters most to me: someone passing me, then me passing someone.
+  const ev = events.find((e) => e.loser === me) || events.find((e) => e.winner === me);
+  if (ev) return overtakeOverlay(ev);
+  const e = events[events.length - 1];
+  toast(t('overtakeOthers', memberById(e.winner)?.name, memberById(e.loser)?.name));
+}
+
+function overtakeOverlay(ev) {
+  const winner = memberById(ev.winner);
+  const loser = memberById(ev.loser);
+  if (!winner || !loser) return;
+  const iWon = ev.winner === state.me.id;
+  const other = iWon ? loser : winner;
+  document.querySelector('.overtake')?.remove();
+
+  const el = document.createElement('div');
+  el.className = `overtake ${iWon ? 'win' : 'lose'}`;
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-labelledby', 'ot-title');
+  el.innerHTML = `
+    <div class="ot-card">
+      <div class="ot-race" aria-hidden="true">
+        <div class="ot-track"></div>
+        <div class="ot-finish">🏁</div>
+        <div class="ot-runner ot-loser" style="--c:${loser.color}">${avatar(loser, 'lg')}<b class="ot-num">${ev.l}</b></div>
+        <div class="ot-runner ot-winner" style="--c:${winner.color}"><i class="ot-trail"></i><i class="ot-crown">👑</i>${avatar(winner, 'lg')}<b class="ot-num">${ev.w}</b></div>
+      </div>
+      <h2 id="ot-title">${iWon ? t('overtakeWinTitle') : t('overtakeLoseTitle')}</h2>
+      <p>${iWon ? t('overtakeWinText', esc(other.name), ev.w, ev.l) : t('overtakeLoseText', esc(other.name), ev.w, ev.l)}</p>
+      <div class="ot-actions">${
+        iWon
+          ? `<button class="btn primary big" type="button" data-close>${t('yay')}</button>`
+          : `<button class="btn primary big" type="button" data-strike>${t('strikeBack', state.me.glass)}</button>
+             <button class="btn ghost" type="button" data-close>${t('later')}</button>`
+      }</div>
+    </div>`;
+
+  let timer;
+  const close = () => {
+    clearTimeout(timer);
+    document.removeEventListener('keydown', onKey);
+    el.classList.add('closing');
+    setTimeout(() => el.remove(), 220);
+  };
+  const onKey = (e) => e.key === 'Escape' && close();
+  document.addEventListener('keydown', onKey);
+  el.addEventListener('click', (e) => {
+    if (e.target === el || e.target.closest('[data-close]')) close();
+  });
+  const strike = el.querySelector('[data-strike]');
+  if (strike)
+    strike.onclick = () => {
+      close();
+      addWater(state.me.glass);
+    };
+
+  document.body.appendChild(el);
+  el.querySelector('.btn').focus({ preventScroll: true });
+  navigator.vibrate?.(iWon ? [40, 60, 40, 60, 120] : [200]);
+  if (iWon) {
+    setTimeout(() => celebrate(['🏁', '🎉', '💧', '⚡', '🥇']), 900);
+    timer = setTimeout(close, 6000);
+  }
 }
 
 async function enterApp() {
+  let overtakes;
   try {
-    await loadState();
+    overtakes = await loadState();
   } catch (err) {
     if (!token) return;
     $app.innerHTML = `<main class="onboard"><div class="card stack center"><p>${t('offline')}</p><button class="btn primary" id="retry">↻</button></div></main>`;
@@ -295,6 +393,7 @@ async function enterApp() {
   render();
   connectEvents();
   syncPush();
+  showOvertakes(overtakes);
 }
 
 function render() {
@@ -306,7 +405,7 @@ function render() {
   ];
   $app.innerHTML = `
     <header class="top">
-      <div class="brand"><img src="/icons/icon.svg" alt=""><span>${t('appName')}</span></div>
+      <div class="brand"><img src="/icons/icon-192.png" alt=""><span>${t('appName')}</span></div>
       <div class="top-avatars">${state.room.members.map((m) => avatar(m, 'sm')).join('')}</div>
     </header>
     <main class="view" id="view"></main>
@@ -329,13 +428,16 @@ function personCard(m) {
   const s = statsById(m.id);
   const pct = s.goal ? s.todayMl / s.goal : 0;
   const isMe = m.id === state.me.id;
+  const others = state.stats.members.filter((o) => o.memberId !== m.id);
+  const leading = others.length > 0 && s.todayMl > 0 && others.every((o) => s.todayMl > o.todayMl);
   const html = `
     <div class="person-card ${isMe ? 'me' : ''} ${pct >= 1 ? 'done' : ''}" style="--c:${m.color}">
       ${glassSVG(pct, m.color, m.id)}
       <div class="pc-name">${esc(m.name)}${isMe ? ` <small>(${t('you')})</small>` : ''}</div>
       <div class="pc-amount"><b>${fmtL(s.todayMl)}</b> / ${fmtL(s.goal)} ${t('lUnit')}</div>
       <div class="pc-meta">${pct >= 1 ? `<span class="pill ok">✓ ${Math.round(pct * 100)}%</span>` : `<span class="pill">${Math.round(pct * 100)}%</span>`}
-        ${s.streak ? `<span class="pill fire" title="${esc(t('streak'))}">🔥 ${s.streak}</span>` : ''}</div>
+        ${s.streak ? `<span class="pill fire" title="${esc(t('streak'))}">🔥 ${s.streak}</span>` : ''}
+        ${leading ? `<span class="pill lead" title="${esc(t('leader'))}">🥇</span>` : ''}</div>
     </div>`;
   lastPct.set(m.id, pct);
   return html;
@@ -466,10 +568,9 @@ async function addWater(ml, btn) {
   }
 }
 
-function celebrate() {
+function celebrate(bits = ['💧', '💙', '✨', '🎉', '💦']) {
   const layer = document.createElement('div');
   layer.className = 'confetti';
-  const bits = ['💧', '💙', '✨', '🎉', '💦'];
   for (let i = 0; i < 28; i++) {
     const s = document.createElement('span');
     s.textContent = bits[i % bits.length];
@@ -785,9 +886,9 @@ let refreshTimer = null;
 
 async function refresh() {
   if (!token) return;
-  await loadState();
-  if (tab === 'settings' && settingsDirty) return; // don't clobber what someone is typing
-  render();
+  const overtakes = await loadState();
+  if (!(tab === 'settings' && settingsDirty)) render(); // don't clobber what someone is typing
+  showOvertakes(overtakes);
 }
 
 function scheduleRefresh() {

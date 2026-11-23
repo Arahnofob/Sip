@@ -114,3 +114,15 @@ test('push wording: goal reached beats the normal message', () => {
   const ahead = drankMessage({ lang: 'uk', senderName: 'Dana', ml: 250, senderToday: 1200, recipientToday: 800, senderGoal: 2000, recipientGoal: 2000 });
   assert.match(ahead.body, /попереду/);
 });
+
+test('overtake: passing someone counts, first sip of the day and pulling further ahead do not', async () => {
+  const { isOvertake } = await import('../server/messages.js');
+  assert.equal(isOvertake(400, 600, 500), true); // 400 -> 600 passes 500
+  assert.equal(isOvertake(500, 600, 500), true); // breaking a tie
+  assert.equal(isOvertake(0, 250, 0), false); // first glass of the morning
+  assert.equal(isOvertake(600, 800, 500), false); // already ahead
+  assert.equal(isOvertake(300, 450, 500), false); // still behind
+  const msg = drankMessage({ lang: 'uk', senderName: 'Дарина', ml: 200, senderToday: 600, recipientToday: 500, senderGoal: 2000, recipientGoal: 2000 });
+  assert.match(msg.title, /обганяє/);
+  assert.match(msg.body, /600 проти твоїх 500/);
+});

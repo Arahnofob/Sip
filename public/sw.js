@@ -1,9 +1,9 @@
 // Service worker: offline app shell, push notifications, and the
 // "Me too: +250 ml" quick action right from the notification.
 
-const SHELL = 'kovtok-shell-v1';
+const SHELL = 'kovtok-shell-v2';
 const AUTH = 'kovtok-auth';
-const SHELL_FILES = ['/', '/index.html', '/style.css', '/app.js', '/i18n.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png'];
+const SHELL_FILES = ['/', '/index.html', '/style.css', '/app.js', '/i18n.js', '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));

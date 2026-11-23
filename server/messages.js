@@ -18,6 +18,8 @@ const T = {
       'Пий воду — разом легше 💙',
     ],
     ahead: (name, theirs, mine) => `${name} попереду: ${fmtL(theirs)} л проти твоїх ${fmtL(mine)} л. Наздоганяй! 🏃`,
+    overtakeTitle: (name) => `🏁 ${name} тебе обганяє!`,
+    overtakeBody: (theirs, mine) => `${theirs} проти твоїх ${mine} мл. Відіграйся! 💪`,
     goalTitle: (name) => `🎉 ${name}: денну норму виконано!`,
     goalBody: (mine, goal) =>
       mine >= goal ? 'Ви обоє молодці сьогодні 💙' : `У тебе ${fmtL(mine)} з ${fmtL(goal)} л. Твоя черга!`,
@@ -36,6 +38,8 @@ const T = {
       'Hydrate together 💙',
     ],
     ahead: (name, theirs, mine) => `${name} is ahead: ${fmtL(theirs)} L vs your ${fmtL(mine)} L. Catch up! 🏃`,
+    overtakeTitle: (name) => `🏁 ${name} just overtook you!`,
+    overtakeBody: (theirs, mine) => `${theirs} vs your ${mine} ml. Strike back! 💪`,
     goalTitle: (name) => `🎉 ${name} hit today's goal!`,
     goalBody: (mine, goal) =>
       mine >= goal ? 'You both did great today 💙' : `You're at ${fmtL(mine)} of ${fmtL(goal)} L. Your turn!`,
@@ -57,11 +61,23 @@ export function drankMessage({ lang, senderName, ml, senderToday, recipientToday
   if (justHitGoal) {
     return { title: t.goalTitle(senderName), body: t.goalBody(recipientToday, recipientGoal) };
   }
+  if (isOvertake(senderToday - ml, senderToday, recipientToday)) {
+    return { title: t.overtakeTitle(senderName), body: t.overtakeBody(senderToday, recipientToday) };
+  }
   const body =
     senderToday > recipientToday && recipientToday < recipientGoal
       ? t.ahead(senderName, senderToday, recipientToday)
       : pick(t.drankBody);
   return { title: t.drankTitle(senderName, ml), body };
+}
+
+/**
+ * Did this glass take the sender past someone? Only counts when the other person
+ * has drunk something today (no "overtake" on the first sip of the morning) and the
+ * sender was level or behind before it.
+ */
+export function isOvertake(senderBefore, senderAfter, other) {
+  return other > 0 && senderBefore <= other && senderAfter > other;
 }
 
 export function nudgeMessage({ lang, senderName }) {

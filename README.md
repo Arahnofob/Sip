@@ -12,8 +12,12 @@ A tiny web app for two (or a few) people to track how much water they drink each
 - **Push notifications to your partner** when you drink, with smart wording:
   - "💧 Дарина: +250 мл. Your turn!"
   - "Дарина is ahead: 1.2 L vs your 0.8 L. Catch up! 🏃"
+  - "🏁 Дарина just overtook you! 600 vs your 500 ml. Strike back! 💪"
   - "🎉 Дарина hit today's goal!"
   - On Android/desktop the notification has a **"Me too: +250 ml"** button, so you can log a glass without opening the app.
+- **🏁 Overtakes**: when one of you passes the other's total for the day (500 vs 400, then +200 → 600 vs 500), a little race plays.
+  The one who pulled ahead gets a crown and confetti. The one who got passed gets "You've been overtaken! 😱", a **Strike back: +250 ml** button, and a push notification.
+  If it happened while the app was closed, it plays the next time you open it. Whoever leads today has a 🥇 on their card.
 - **👋 Nudge button**: remind your partner to drink (limited to once a minute).
 - **Live sync**: the screen updates instantly when your partner logs water.
 - **Rewards**:

@@ -645,7 +645,7 @@ details[open] summary {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: linear-gradient(135deg, color-mix(in srgb, #ef5d8e 14%, var(--card)), color-mix(in srgb, var(--primary) 14%, var(--card)));
+  background: linear-gradient(135deg, color-mix(in srgb, #8b5cf6 14%, var(--card)), color-mix(in srgb, var(--primary) 14%, var(--card)));
 }
 .team-big {
   display: flex;
@@ -936,6 +936,203 @@ details[open] summary {
   to {
     transform: translateY(110vh) rotate(260deg);
     opacity: 0.2;
+  }
+}
+
+/* ---------- overtake ---------- */
+.pill.lead {
+  background: color-mix(in srgb, #f2c94c 22%, transparent);
+}
+.overtake {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(8, 14, 32, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: ot-fade 0.25s ease both;
+}
+.overtake.closing {
+  animation: ot-fade 0.2s ease reverse both;
+}
+@keyframes ot-fade {
+  from {
+    opacity: 0;
+  }
+}
+.ot-card {
+  width: min(100%, 380px);
+  background: var(--card);
+  border-radius: 24px;
+  padding: 22px 20px 18px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  animation: ot-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.overtake.lose .ot-card {
+  animation: ot-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both, ot-shake 0.5s 1.3s ease both;
+}
+@keyframes ot-pop {
+  from {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+}
+@keyframes ot-shake {
+  20%,
+  60% {
+    transform: translateX(-8px) rotate(-1deg);
+  }
+  40%,
+  80% {
+    transform: translateX(8px) rotate(1deg);
+  }
+}
+.ot-card h2 {
+  font-size: 1.6rem;
+  margin-top: 8px;
+  animation: ot-title 0.5s 1.15s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.ot-card p {
+  color: var(--muted);
+  margin-top: 6px;
+  animation: ot-fade 0.4s 1.3s both;
+}
+@keyframes ot-title {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+.ot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  animation: ot-fade 0.4s 1.4s both;
+}
+
+/* The race: the overtaker starts behind and zooms past. */
+.ot-race {
+  position: relative;
+  height: 112px;
+  padding-top: 8px;
+  margin: 0 6px;
+}
+.ot-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 54px;
+  border-top: 3px dashed var(--line);
+}
+.ot-finish {
+  position: absolute;
+  right: -4px;
+  top: 16px;
+  font-size: 1.6rem;
+}
+.ot-runner {
+  position: absolute;
+  top: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+}
+.ot-num {
+  font-weight: 800;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--c);
+}
+.ot-runner .avatar.lg {
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.ot-loser {
+  left: 40%;
+  z-index: 1;
+  animation: ot-loser 1.4s ease-out both;
+}
+.ot-winner {
+  left: 80%;
+  z-index: 2;
+  animation: ot-winner 1.2s cubic-bezier(0.55, 0, 0.25, 1.15) both;
+}
+@keyframes ot-loser {
+  from {
+    left: 30%;
+  }
+  60% {
+    transform: translateX(-50%);
+  }
+  75% {
+    transform: translateX(-50%) rotate(-12deg);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes ot-winner {
+  from {
+    left: 6%;
+  }
+}
+.ot-crown {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  font-style: normal;
+  font-size: 1.4rem;
+  transform: translateX(-50%) rotate(-12deg);
+  animation: ot-crown 0.5s 1.25s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes ot-crown {
+  from {
+    transform: translateX(-50%) translateY(-30px) rotate(-40deg);
+    opacity: 0;
+  }
+}
+.ot-trail {
+  position: absolute;
+  top: 14px;
+  right: 50%;
+  width: 90px;
+  height: 28px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c) 45%, transparent));
+  animation: ot-trail 1.2s ease-out both;
+  z-index: -1;
+}
+@keyframes ot-trail {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.overtake.win .ot-winner .avatar {
+  animation: ot-bounce 0.5s 1.15s ease both;
+}
+@keyframes ot-bounce {
+  40% {
+    transform: translateY(-14px) scale(1.12);
+  }
+}
+.overtake.lose .ot-loser .avatar {
+  filter: saturate(0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overtake *,
+  .overtake {
+    animation: none !important;
   }
 }
 
