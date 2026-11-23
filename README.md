@@ -65,6 +65,8 @@ fly deploy
 
 Optional environment variables: `PORT`, `DATA_DIR`, `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (if you want to manage keys yourself), `VAPID_SUBJECT` (a `mailto:` contact for push services).
 
+**Railway auto-deploys not happening?** In the service's Settings → Source, "Auto deploys when pushed to GitHub" must be on. If it says "Auto deploy unavailable", install the **Railway GitHub App** on your GitHub account (github.com/settings/installations should list Railway, with access to this repo), then reconnect the repo. Until then, Ctrl+K → *Deploy Latest Commit* deploys by hand. `GET /api/version` shows which commit is live.
+
 ⚠️ Without a persistent volume, all data *and the push keys* are lost on every redeploy, so both phones would need to re-enable notifications.
 
 ## Getting notifications on your phones

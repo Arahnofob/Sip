@@ -203,6 +203,11 @@ app.use(express.json({ limit: '20kb' }));
 
 app.get('/healthz', (_req, res) => res.send('ok'));
 
+// Which commit is running (Railway sets RAILWAY_GIT_COMMIT_SHA), handy to confirm a deploy went out.
+app.get('/api/version', (_req, res) => {
+  res.json({ commit: (process.env.RAILWAY_GIT_COMMIT_SHA || 'dev').slice(0, 7) });
+});
+
 app.post('/api/rooms', (req, res) => {
   const room = { id: id(), code: newCode(), createdAt: Date.now(), members: [], entries: [], lastNudge: {} };
   const me = newMember(room, req.body);
