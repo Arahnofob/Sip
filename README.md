@@ -1,2 +1,71 @@
-# Sip
-Drink more water app 
+# 💧 Ковток (Kovtok) — drink water together
+
+A tiny web app for two (or a few) people to track how much water they drink each day.
+**Every time one of you logs a glass, the other gets a push notification** nudging them to drink too.
+
+> застосунок, де ми вдвох додаємо кількість води, яку ми випили за день. Кожен раз, коли хтось додає нову порцію, інша людина отримує сповіщення, спонукаючи випити теж.
+
+## Features
+
+- **Two glasses side by side**: each person's progress toward their daily goal, filling with animated water.
+- **One-tap logging**: a big button for "my glass" (configurable size) plus quick amounts and a custom one. You can undo or delete your own entries.
+- **Push notifications to your partner** when you drink, with smart wording:
+  - "💧 Дарина: +250 мл. Your turn!"
+  - "Дарина is ahead: 1.2 L vs your 0.8 L. Catch up! 🏃"
+  - "🎉 Дарина hit today's goal!"
+  - On Android/desktop the notification has a **"Me too: +250 ml"** button, so you can log a glass without opening the app.
+- **👋 Nudge button**: remind your partner to drink (limited to once a minute).
+- **Live sync**: the screen updates instantly when your partner logs water.
+- **Rewards**:
+  - 🔥 personal streaks (consecutive days you hit your goal) and best streak
+  - 💞 team streak (days you *both* hit your goals)
+  - 🥇 weekly leaderboard, plus 👑 a crown for whoever drank the most each finished week
+  - 11 achievements: first drop, early bird (before 8:00), 3/7/30-day streaks, 3 L in a day, champion of the week, 100 L all-time…
+  - a 7-day chart for both of you
+- Ukrainian 🇺🇦 and English, light and dark mode, installable to your home screen (PWA), works across time zones.
+- Changing your goal doesn't rewrite your past streaks.
+
+## How it works
+
+- `server/`: Node.js + Express. It stores data in a single JSON file (`DATA_DIR/db.json`), sends Web Push (VAPID keys are generated automatically on first start and stored in the same file), and streams live updates over Server-Sent Events.
+- `public/`: plain HTML/CSS/JS with no build step, plus a service worker for notifications.
+- No accounts or passwords. One of you creates a "space" and sends the invite link, and the other opens it and joins. To log in on another device, open the invite link again and tap your name. **Keep the invite link private**: anyone with it can join your space.
+
+## Run locally
+
+```bash
+npm install
+npm start          # http://localhost:3000
+npm test           # unit tests for streaks / rewards
+```
+
+Push notifications work on `localhost` for testing in desktop Chrome/Firefox/Edge. On phones you need HTTPS, so deploy it.
+
+## Deploy (you need HTTPS + a persistent disk)
+
+Any host that runs a Docker image or Node.js app with a persistent volume works. Set `DATA_DIR` to the mounted volume.
+
+**Railway** (simplest): New Project → Deploy from GitHub repo → add a **Volume** mounted at `/data` → set the variable `DATA_DIR=/data` → Settings → Networking → Generate Domain.
+
+**Fly.io**:
+```bash
+fly launch --no-deploy            # uses the Dockerfile
+fly volumes create data --size 1
+# add to fly.toml:
+# [mounts]
+#   source = "data"
+#   destination = "/data"
+fly deploy
+```
+
+**Your own server / Raspberry Pi**: `docker build -t kovtok . && docker run -d -p 3000:3000 -v kovtok-data:/data kovtok`, then put it behind HTTPS (Caddy, Cloudflare Tunnel or Tailscale Funnel).
+
+Optional environment variables: `PORT`, `DATA_DIR`, `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (if you want to manage keys yourself), `VAPID_SUBJECT` (a `mailto:` contact for push services).
+
+⚠️ Without a persistent volume, all data *and the push keys* are lost on every redeploy, so both phones would need to re-enable notifications.
+
+## Getting notifications on your phones
+
+- **iPhone (iOS 16.4+)**: open the site in Safari → Share → **Add to Home Screen** → open Kovtok from the home screen icon → Settings → Enable notifications. (iOS only allows web push for apps added to the home screen.)
+- **Android**: open in Chrome → tap **Enable** on the banner. Installing to the home screen is optional but nicer.
+- Use **Settings → Send test** to check it works.
