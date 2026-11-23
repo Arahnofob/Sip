@@ -31,7 +31,8 @@ It's a **water fight**: every glass you log is a hit on your opponent.
 
 - `server/`: Node.js + Express. It stores data in a single JSON file (`DATA_DIR/db.json`), sends Web Push (VAPID keys are generated automatically on first start and stored in the same file), and streams live updates over Server-Sent Events.
 - `public/`: plain HTML/CSS/JS with no build step, plus a service worker for notifications.
-- No accounts or passwords. One of you creates a "space" and sends the invite link, and the other opens it and joins. To log in on another device, open the invite link again and tap your name. **Keep the invite link private**: anyone with it can join your space.
+- No accounts or passwords. One of you creates the arena and sends the invite link; the other opens it and joins as a new fighter. **Keep the invite link private**: anyone with it can join your arena.
+- To log in as yourself on another device, open the invite link, choose "I'm already in this arena", pick your name and enter your personal **login code** (Settings → Your devices on your first device). Settings also shows how many devices are logged in as you, with a button to log out all the others.
 
 ## Run locally
 

@@ -35,6 +35,16 @@ const newCode = () => {
   return s;
 };
 
+// Personal code for logging in as yourself on another device (shown only in your own Settings).
+const LOGIN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const newLoginCode = () => {
+  let s = '';
+  for (const b of crypto.randomBytes(6)) s += LOGIN_ALPHABET[b % LOGIN_ALPHABET.length];
+  return s;
+};
+const normalizeLoginCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const sameCode = (a, b) => a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -65,11 +75,24 @@ function newMember(room, body) {
     lang: cleanLang(body.lang),
     glass: cleanInt(body.glass, 50, 1500, 250),
     goals: [{ since: Date.now(), ml: cleanInt(body.goal, 500, 6000, 2000) }],
+    loginCode: newLoginCode(),
     createdAt: Date.now(),
   };
   room.members.push(member);
   return member;
 }
+
+// Members created before login codes existed get one now.
+let migrated = false;
+for (const room of Object.values(db.rooms)) {
+  for (const m of room.members) {
+    if (!m.loginCode) {
+      m.loginCode = newLoginCode();
+      migrated = true;
+    }
+  }
+}
+if (migrated) store.flush();
 
 function newSession(room, member) {
   const token = id(24);
@@ -93,6 +116,14 @@ function auth(req, _res, next) {
   next();
 }
 
+const devicesOf = (member) => Object.values(db.sessions).filter((s) => s.memberId === member.id).length;
+
+// Drop push subscriptions that were registered by sessions that no longer exist.
+function pruneSubscriptions(member) {
+  const subs = db.subscriptions[member.id] || [];
+  db.subscriptions[member.id] = subs.filter((s) => !s.token || db.sessions[s.token]);
+}
+
 const publicMember = (m) => ({ id: m.id, name: m.name, color: m.color, goal: currentGoal(m) });
 
 function statePayload(room, me) {
@@ -106,7 +137,17 @@ function statePayload(room, me) {
     .sort((a, b) => b.ts - a.ts)
     .slice(0, 100);
   return {
-    me: { id: me.id, name: me.name, color: me.color, goal: currentGoal(me), glass: me.glass, tz: me.tz, lang: me.lang },
+    me: {
+      id: me.id,
+      name: me.name,
+      color: me.color,
+      goal: currentGoal(me),
+      glass: me.glass,
+      tz: me.tz,
+      lang: me.lang,
+      loginCode: me.loginCode,
+      devices: devicesOf(me),
+    },
     room: { code: room.code, createdAt: room.createdAt, members: room.members.map(publicMember) },
     todayEntries,
     stats: computeStats(room, now),
@@ -177,24 +218,38 @@ function roomByCode(code) {
   return room;
 }
 
-// Who is already in this space (so a second device can log in as an existing person).
+// Who is already in this space (shown on the invite page).
 app.get('/api/join/:code', (req, res) => {
   const room = roomByCode(req.params.code);
   res.json({ members: room.members.map((m) => ({ id: m.id, name: m.name, color: m.color })), full: room.members.length >= MAX_MEMBERS });
 });
 
+// Wrong login codes per member: at most 10 tries per 15 minutes.
+const failedLogins = new Map();
+
 app.post('/api/join/:code', (req, res) => {
   const room = roomByCode(req.params.code);
   let me;
   if (req.body.memberId) {
+    // Logging in as someone who already joined (e.g. on a second device) needs their personal code,
+    // so nobody with the invite link can act as someone else.
     me = room.members.find((m) => m.id === req.body.memberId);
     if (!me) throw new HttpError(404, 'member_not_found');
+    const now = Date.now();
+    const f = failedLogins.get(me.id);
+    const recent = f && now - f.since < 15 * 60_000 ? f : { n: 0, since: now };
+    if (recent.n >= 10) throw new HttpError(429, 'too_many_attempts');
+    if (!sameCode(normalizeLoginCode(req.body.loginCode), me.loginCode)) {
+      failedLogins.set(me.id, { ...recent, n: recent.n + 1 });
+      throw new HttpError(403, 'bad_login_code');
+    }
+    failedLogins.delete(me.id);
   } else {
     me = newMember(room, req.body);
-    broadcast(room.id);
   }
   const token = newSession(room, me);
   store.save();
+  broadcast(room.id); // others see the new fighter / the new device count right away
   res.json({ token });
 });
 
@@ -273,7 +328,11 @@ app.post('/api/push/subscribe', auth, (req, res) => {
   const { me, room } = req.ctx;
   const sub = req.body?.subscription;
   if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) throw new HttpError(400, 'bad_subscription');
-  const clean = { endpoint: String(sub.endpoint), keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) } };
+  const clean = {
+    endpoint: String(sub.endpoint),
+    keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) },
+    token: req.ctx.token, // which login registered it, so logging that device out also stops its pushes
+  };
   // An endpoint belongs to one browser; make sure only the current person on it receives pushes.
   for (const mid of Object.keys(db.subscriptions)) {
     db.subscriptions[mid] = db.subscriptions[mid].filter((s) => s.endpoint !== clean.endpoint);
@@ -301,8 +360,23 @@ app.post('/api/push/test', auth, async (req, res) => {
 
 app.post('/api/logout', auth, (req, res) => {
   delete db.sessions[req.ctx.token];
+  pruneSubscriptions(req.ctx.me);
   store.save();
   res.json({ ok: true });
+});
+
+// Log out every other device that is logged in as me (and stop their notifications).
+app.post('/api/logout-others', auth, (req, res) => {
+  const { room, me, token } = req.ctx;
+  for (const [tok, s] of Object.entries(db.sessions)) {
+    if (s.memberId === me.id && tok !== token) delete db.sessions[tok];
+  }
+  // Keep only this device's notifications; it re-registers right after (older entries
+  // don't record which device they belong to, so this is the only safe way to cut the rest).
+  db.subscriptions[me.id] = (db.subscriptions[me.id] || []).filter((s) => s.token === token);
+  store.save();
+  broadcast(room.id);
+  res.json(statePayload(room, me));
 });
 
 // EventSource can't send headers, so the token comes in the query string.

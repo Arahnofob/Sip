@@ -77,7 +77,15 @@ async function api(path, { method = 'GET', body } = {}) {
   }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && token) {
+    // This device was logged out (maybe from another device): stop its notifications too.
+    try {
+      const sub = await (await swReg())?.pushManager.getSubscription();
+      await sub?.unsubscribe();
+    } catch {}
     await setToken(null);
+    state = null;
+    prevTotals = null;
+    events?.close();
     boot();
   }
   if (!res.ok) throw Object.assign(new Error(data.error || 'error'), { code: data.error, status: res.status });
@@ -87,6 +95,8 @@ async function api(path, { method = 'GET', body } = {}) {
 function showError(err) {
   if (err?.code === 'offline') toast(t('offline'));
   else if (err?.code === 'room_not_found') toast(t('roomNotFound'));
+  else if (err?.code === 'bad_login_code') toast(t('badLoginCode'));
+  else if (err?.code === 'too_many_attempts') toast(t('tooManyAttempts'));
   else toast(t('error'));
 }
 
@@ -250,10 +260,20 @@ async function renderJoin(code) {
       <button class="btn primary big" type="submit">${t('joinBtn')}</button>
     </form>`
     }
-    <div class="card stack">
-      <h2>${t('imAlready')}</h2>
-      <div class="chips">${info.members.map((m) => `<button type="button" class="chip person" data-id="${esc(m.id)}">${avatar(m, 'sm')} ${esc(m.name)}</button>`).join('')}</div>
-    </div>
+    <details class="card" ${info.full ? 'open' : ''}>
+      <summary>${t('imAlready')}</summary>
+      <form class="stack" id="relogin">
+        <div class="field"><span>${t('whoAreYou')}</span>
+          <div class="chips">${info.members
+            .map((m) => `<label class="chip radio"><input type="radio" name="memberId" value="${esc(m.id)}" required><span>${esc(m.name)}</span></label>`)
+            .join('')}</div>
+        </div>
+        <label class="field"><span>${t('loginCodeLabel')}</span>
+          <input name="loginCode" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" maxlength="12"></label>
+        <p class="hint">${t('loginCodeHint')}</p>
+        <button class="btn" type="submit">${t('loginBtn')}</button>
+      </form>
+    </details>
     <button type="button" class="btn ghost" id="back">${t('back')}</button>
   </main>`;
   bindLangSwitch(() => renderJoin(code));
@@ -277,7 +297,13 @@ async function renderJoin(code) {
       const f = new FormData(form);
       finish({ name: f.get('name'), goal: Number(f.get('goal')), tz: browserTz(), lang }, e.submitter);
     };
-  for (const b of $app.querySelectorAll('.person')) b.onclick = () => finish({ memberId: b.dataset.id }, b);
+  const relogin = $app.querySelector('#relogin');
+  relogin.onsubmit = (e) => {
+    e.preventDefault();
+    const f = new FormData(relogin);
+    if (!f.get('memberId')) return toast(t('pickYourself'));
+    finish({ memberId: f.get('memberId'), loginCode: f.get('loginCode') }, e.submitter);
+  };
   $app.querySelector('#back').onclick = () => {
     history.replaceState(null, '', '/');
     renderWelcome();
@@ -910,6 +936,16 @@ async function renderSettings(view) {
       <div id="notif-body" class="stack"></div>
     </section>
 
+    <section class="card stack" id="devices">
+      <h2>📱 ${t('devicesTitle')}</h2>
+      <p>${t('devicesCount', me.devices || 1)}</p>
+      <div class="field"><span>${t('loginCodeLabel')}</span>
+        <div class="login-code"><code>${esc(me.loginCode || '')}</code></div>
+      </div>
+      <p class="hint">${t('loginCodeInfo')}</p>
+      ${(me.devices || 1) > 1 ? `<button class="btn" type="button" id="logout-others">${t('logoutOthers')}</button>` : ''}
+    </section>
+
     ${inviteCard()}
     <p class="hint center">${t('inviteCode')}: <code>${esc(state.room.code)}</code></p>
 
@@ -946,6 +982,19 @@ async function renderSettings(view) {
       showError(err);
     }
   };
+  const lo = view.querySelector('#logout-others');
+  if (lo)
+    lo.onclick = async () => {
+      if (!confirm(t('logoutOthersConfirm'))) return;
+      try {
+        state = await api('/api/logout-others', { method: 'POST' });
+        await syncPush();
+        await refresh();
+        toast(t('loggedOutOthers'));
+      } catch (err) {
+        showError(err);
+      }
+    };
   view.querySelector('#logout').onclick = async () => {
     if (!confirm(t('logoutConfirm'))) return;
     await disablePush().catch(() => {});
