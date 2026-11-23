@@ -112,7 +112,7 @@ test('push wording: goal reached beats the normal message', () => {
   const msg = drankMessage({ lang: 'en', senderName: 'Dana', ml: 500, senderToday: 2100, recipientToday: 800, senderGoal: 2000, recipientGoal: 2000 });
   assert.match(msg.title, /goal/);
   const ahead = drankMessage({ lang: 'uk', senderName: 'Dana', ml: 250, senderToday: 1200, recipientToday: 800, senderGoal: 2000, recipientGoal: 2000 });
-  assert.match(ahead.body, /попереду/);
+  assert.match(ahead.body, /тисне/);
 });
 
 test('overtake: passing someone counts, first sip of the day and pulling further ahead do not', async () => {
@@ -125,4 +125,35 @@ test('overtake: passing someone counts, first sip of the day and pulling further
   const msg = drankMessage({ lang: 'uk', senderName: 'Дарина', ml: 200, senderToday: 600, recipientToday: 500, senderGoal: 2000, recipientGoal: 2000 });
   assert.match(msg.title, /обганяє/);
   assert.match(msg.body, /600 проти твоїх 500/);
+});
+
+test('rounds: each finished day goes to whoever drank more; ties and today do not count', () => {
+  const r = room([
+    ['a', '2026-11-15', 1000],
+    ['b', '2026-11-15', 1500], // b wins
+    ['a', '2026-11-16', 2000],
+    ['b', '2026-11-16', 2000], // tie
+    ['a', '2026-11-17', 800], // b no-show: a wins
+    ['a', '2026-11-18', 100],
+    ['b', '2026-11-18', 3000], // today: not finished
+  ]);
+  const [a, b] = computeStats(r, NOW).members;
+  assert.equal(a.rounds, 1);
+  assert.equal(b.rounds, 1);
+});
+
+test('rounds only count after everyone joined', () => {
+  const a = member('a');
+  const b = { ...member('b'), createdAt: at('2026-11-17', 9) };
+  const r = room(
+    [
+      ['a', '2026-11-15', 2000], // before b joined
+      ['a', '2026-11-17', 900],
+      ['b', '2026-11-17', 1000],
+    ],
+    [a, b],
+  );
+  const s = computeStats(r, NOW).members;
+  assert.equal(s[0].rounds, 0);
+  assert.equal(s[1].rounds, 1);
 });

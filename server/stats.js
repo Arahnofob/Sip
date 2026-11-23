@@ -209,6 +209,22 @@ export function computeStats(room, now = Date.now()) {
     if (w === lastWeek) lastWeekWinners = winners;
   }
 
+  // Rounds: every finished day is a round, won by whoever drank the most (ties: nobody).
+  // Only days after everyone had joined count, and a no-show loses the round.
+  const rounds = Object.fromEntries(members.map((m) => [m.id, 0]));
+  if (perMember.length >= 2) {
+    const tz0 = members[0].tz || 'UTC';
+    const start = dayKey(Math.max(...members.map((m) => m.createdAt || 0)), tz0);
+    const today0 = perMember[0].today;
+    const days = new Set(perMember.flatMap((s) => [...s.totals.keys()]));
+    for (const k of days) {
+      if (k < start || k >= today0) continue;
+      const ml = perMember.map((s) => s.totals.get(k) || 0);
+      const max = Math.max(...ml);
+      if (max > 0 && ml.filter((v) => v === max).length === 1) rounds[perMember[ml.indexOf(max)].memberId]++;
+    }
+  }
+
   const result = perMember.map((s) => {
     const badges = {
       first_drop: s.lifetime > 0,
@@ -235,6 +251,7 @@ export function computeStats(room, now = Date.now()) {
       lifetime: s.lifetime,
       last7: s.last7,
       crowns: crowns[s.memberId] || 0,
+      rounds: rounds[s.memberId] || 0,
       badges,
     };
   });

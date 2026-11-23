@@ -7,26 +7,24 @@ A tiny web app for two (or a few) people to track how much water they drink each
 
 ## Features
 
-- **Two glasses side by side**: each person's progress toward their daily goal, filling with animated water.
-- **One-tap logging**: a big button for "my glass" (configurable size) plus quick amounts and a custom one. You can undo or delete your own entries.
-- **Push notifications to your partner** when you drink, with smart wording:
-  - "💧 Дарина: +250 мл. Your turn!"
-  - "Дарина is ahead: 1.2 L vs your 0.8 L. Catch up! 🏃"
-  - "🏁 Дарина just overtook you! 600 vs your 500 ml. Strike back! 💪"
-  - "🎉 Дарина hit today's goal!"
-  - On Android/desktop the notification has a **"Me too: +250 ml"** button, so you can log a glass without opening the app.
-- **🏁 Overtakes**: when one of you passes the other's total for the day (500 vs 400, then +200 → 600 vs 500), a little race plays.
-  The one who pulled ahead gets a crown and confetti. The one who got passed gets "You've been overtaken! 😱", a **Strike back: +250 ml** button, and a push notification.
-  If it happened while the app was closed, it plays the next time you open it. Whoever leads today has a 🥇 on their card.
-- **👋 Nudge button**: remind your partner to drink (limited to once a minute).
-- **Live sync**: the screen updates instantly when your partner logs water.
-- **Rewards**:
-  - 🔥 personal streaks (consecutive days you hit your goal) and best streak
-  - 💞 team streak (days you *both* hit your goals)
-  - 🥇 weekly leaderboard, plus 👑 a crown for whoever drank the most each finished week
-  - 11 achievements: first drop, early bird (before 8:00), 3/7/30-day streaks, 3 L in a day, champion of the week, 100 L all-time…
+It's a **water fight**: every glass you log is a hit on your opponent.
+
+- **The arena**: you vs your partner, with fighting-game power bars toward each daily goal, a tug-of-war bar showing who dominates today, a 👑 on the leader, and a running "Round N" counter (one round per day).
+- **Strike button**: one tap logs "my glass" (configurable size). There are also quick amounts and a custom one, and you can undo or delete your own hits.
+- **Hit effects**: when your partner drinks, a damage number (+250) flies off their fighter, yours flinches and the arena flashes, live.
+- **Push notifications to your partner** on every hit:
+  - "💦 Дарина атакує: +250 мл. Твій хід! Відповідай склянкою води ⚔️"
+  - "🏁 Дарина тебе обганяє! 600 проти твоїх 500 мл. Відіграйся! 💪"
+  - "🏆 Дарина: денну норму знищено!"
+  - On Android/desktop the notification has a **"⚔️ Hit back: +250 ml"** button, so you can log a glass without opening the app.
+- **🏁 Overtakes**: when one of you passes the other's total for the day (500 vs 400, then +200 → 600 vs 500), a race plays. The leader gets a crown and confetti; the one who was passed gets "Overtaken!" and a **Strike back** button. If it happened while the app was closed, it plays the next time you open it.
+- **👊 Throw a challenge**: taunt your partner with a push (limited to once a minute).
+- **Trophies**:
+  - **Scoreboard**: rounds won (each finished day goes to whoever drank more) and 👑 weeks won
+  - battle of the week leaderboard, 🔥 personal streaks, 🤝 team streak (days you both hit your goals)
+  - 11 achievements: First blood, Dawn strike, Combo ×3/×7, Knockout (3 L in a day), Champion, Unstoppable…
   - a 7-day chart for both of you
-- Ukrainian 🇺🇦 and English, light and dark mode, installable to your home screen (PWA), works across time zones.
+- Ukrainian 🇺🇦 and English, dark arena theme, installable to your home screen (PWA), works across time zones.
 - Changing your goal doesn't rewrite your past streaks.
 
 ## How it works

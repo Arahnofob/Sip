@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const MAX_MEMBERS = 6;
-const COLORS = ['#2f80ed', '#8b5cf6', '#20a67a', '#f2994a', '#ef5d8e', '#00a8b5'];
+const COLORS = ['#3b8cff', '#a259ff', '#22c38e', '#ff9f43', '#ff4f8b', '#19c6d1'];
 const LANGS = ['uk', 'en'];
 
 const store = new Store(DATA_DIR);
@@ -107,7 +107,7 @@ function statePayload(room, me) {
     .slice(0, 100);
   return {
     me: { id: me.id, name: me.name, color: me.color, goal: currentGoal(me), glass: me.glass, tz: me.tz, lang: me.lang },
-    room: { code: room.code, members: room.members.map(publicMember) },
+    room: { code: room.code, createdAt: room.createdAt, members: room.members.map(publicMember) },
     todayEntries,
     stats: computeStats(room, now),
     pushReady: room.members.filter((m) => (db.subscriptions[m.id] || []).length > 0).map((m) => m.id),
